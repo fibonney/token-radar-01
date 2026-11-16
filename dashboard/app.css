@@ -1,5 +1,5 @@
 /* Token Radar's radar-2 theme. Palette: deep green on a pale canvas, amber for rising names,
-   red only for falls. One spacing scale, one panel radius, two families. */
+   red only for falls. One spacing scale, one panel radius, two type families. */
 :root {
   --canvas: #f2f5f3;
   --surface: #ffffff;
@@ -65,7 +65,7 @@ a { color: var(--accent); }
 .fact b { font-family: var(--font-num); font-size: 15px; font-weight: 500; }
 .fact span { color: var(--muted); font-size: 13px; }
 
-/* Top five, one card each: rank, name, implied value, the week's move. */
+/* Top five, one card each: rank, name, implied value, and the week's move. */
 .spot { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--step-3); margin-bottom: var(--step-4); }
 .spot-card {
   display: grid; gap: 2px; text-align: left; padding: var(--step-4);
@@ -121,7 +121,7 @@ tbody tr[data-selected="true"] { background: var(--accent-soft); }
 .badge-early { background: #e8eefc; color: #2c4f9e; }
 .badge-rising { background: var(--amber-soft); color: var(--amber); }
 
-/* Early radar: six young growers in a row of small cards. */
+/* Early radar: a row of small cards for six young growers. */
 .early { margin-bottom: var(--step-4); padding: var(--step-5); display: grid; gap: var(--step-3); }
 .early-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--step-3); }
 .early-card {
@@ -160,7 +160,7 @@ tbody tr[data-selected="true"] { background: var(--accent-soft); }
 .detail .sub { margin-top: var(--step-1); }
 .detail-section { margin-top: var(--step-5); padding-top: var(--step-4); border-top: 1px solid var(--border); }
 .detail-section h3 { margin-bottom: var(--step-2); }
-/* Why this rank: the model's story, in plain sentences, one paragraph each. */
+/* Why it ranks here: the model's story, in plain sentences, one paragraph each. */
 .why-body { display: grid; gap: var(--step-2); }
 .why-body p { font-size: 14px; line-height: 1.55; }
 .why-body p:first-child { font-weight: 600; }

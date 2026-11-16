@@ -1,8 +1,8 @@
 // Token Radar, radar-2 dashboard. It reads window.RADAR (written beside dashboard/ by main.ts)
 // and renders the ranked board, a top-5 spotlight, an early radar of young fast growers, a
-// filterable table, and a per-protocol detail dialog with the model's own inputs, a plain-words
+// filterable table, and a per-protocol detail dialog carrying the model's own inputs, a plain-words
 // story of why the row ranks where it does, and the protocol's farm plan. No network: every byte
-// it shows is in data.js. The page recomputes each row's implied value from the snapshot figures,
+// it shows lives in data.js. The page recomputes each row's implied value from the snapshot figures,
 // so the page's code and the board's data are visibly the same arithmetic; the farm plan is the
 // same derivation main.ts writes to board.json, and the rank story is the same derivation the
 // model states in lib/model.ts rankStory, mirrored here from the same row fields.
@@ -31,7 +31,7 @@
     if (days >= 365) return (days / 365).toFixed(1) + 'y';
     return Math.max(0, Math.round(days)) + 'd';
   }
-  // The model in one function: TVL x base x growth x maturity x breadth, from the snapshot figures.
+  // The model in one function: TVL x base x growth x maturity x breadth, all from the snapshot figures.
   function impliedOf(row, model) {
     var growth = Math.min(model.growth_cap, Math.max(model.growth_floor, row.change_7d === null || row.change_7d === undefined ? 0 : row.change_7d));
     var growthMult = 1 + (growth / 100) * model.growth_weight;
@@ -45,7 +45,7 @@
   // This mirrors lib/model.ts rankStory, which states the same derivation in TypeScript: position
   // against the top of the board, the multiplier furthest from 1.00 as the driver, and the value
   // a flat week would leave. Nothing here is typed in by hand about a name: the same function
-  // tells the story of rank 1 and of rank 198, and the numbers it quotes are the row's.
+  // tells the story of rank 1 and of rank 198, and every number it quotes comes from the row.
   function rankStory(row) {
     var top = DATA.rows.length ? DATA.rows[0].implied_value_usd : 0;
     var sharePct = top > 0 ? Math.round((row.implied_value_usd / top) * 100) : 0;
@@ -53,7 +53,7 @@
     var first = 'Rank ' + row.rank + ' of ' + DATA.board_size + ', ' + place + ': its implied value of ' + fmtUsd(row.implied_value_usd) + ' is ' + sharePct + '% of the top row\u2019s ' + fmtUsd(top) + '.';
     // Each multiplier's lift, each against its own neutral point: growth and breadth against
     // 1.00 (they can lift the value above its TVL base), maturity against its 0.60 floor (it
-    // never reaches 1.00, so what age adds is measured against a brand-new protocol).
+    // never reaches 1.00, so what age adds is measured against a brand-new protocol, not 1.00).
     var lifts = [
       { name: 'growth', lift: row.growth_multiplier - 1 },
       { name: 'maturity', lift: row.maturity_multiplier - 0.6 },
@@ -64,7 +64,7 @@
     var liftPct = Math.round(Math.abs(driver.lift) * 100);
     var second;
     if (liftPct === 0) {
-      second = 'No single factor lifts it: its value is its TVL base of ' + fmtUsd(row.tvl_usd * DATA.model.base_multiple) + ', with growth, age and breadth all near neutral.';
+      second = 'No single factor moves it: its value is its TVL base of ' + fmtUsd(row.tvl_usd * DATA.model.base_multiple) + ', with growth, age and breadth all close to neutral.';
     } else if (driver.name === 'growth') {
       var growthPct = Math.min(DATA.model.growth_cap, Math.max(DATA.model.growth_floor, row.change_7d === null || row.change_7d === undefined ? 0 : row.change_7d));
       var direction = row.growth_multiplier >= 1 ? 'lifts' : 'cuts';
@@ -77,7 +77,7 @@
     }
     var flat = Math.max(1, Math.round(row.implied_value_usd / row.growth_multiplier));
     var third = row.growth_multiplier === 1
-      ? 'A flat week would change nothing: its growth multiplier is already 1.00.'
+      ? 'A flat week would leave it unchanged: its growth multiplier is already 1.00.'
       : 'A flat week (0% growth) would put it at ' + fmtUsd(flat) + ' instead of ' + fmtUsd(row.implied_value_usd) + '.';
     return [first, second, third];
   }
@@ -103,8 +103,8 @@
     return node;
   }
 
-  // The farm plan is the same derivation main.ts writes to board.json: category, chains, TVL and
-  // age decide the action, the capital, the hold and every cost and time. No name is special-cased.
+  // The farm plan follows the same derivation main.ts writes to board.json: category, chains, TVL
+  // and age decide the action, the capital, the hold and every cost and time. No name is special-cased.
   function chainOf(p) { return p.chains && p.chains.length > 0 ? p.chains[0] : 'its main chain'; }
   function capitalFor(p) {
     if (p.tvl_usd >= 5e9) return 250;
@@ -234,8 +234,8 @@
       return a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0;
     });
   }
-  // The early radar: young protocols whose TVL is already growing, ranked by growth. These are the
-  // launches a reader finds before the crowd: under a year old, at least $5M of TVL, growth above 0.
+  // The early radar: young protocols whose TVL is already growing, ordered by growth. These are
+  // the launches a reader spots before the crowd: under a year old, at least $5M of TVL, growth above 0.
   function earlyRows() {
     return DATA.rows.filter(function (r) {
       return r.age_days !== null && r.age_days < 365 && r.change_7d !== null && r.change_7d > 0 && r.tvl_usd >= 5e6;
@@ -256,12 +256,12 @@
   function lede() {
     return el('section', { class: 'lede' },
       el('div', null,
-        el('h1', { text: 'Which pre-token protocol is worth farming next?' }),
-        el('p', { text: DATA.watchlist_size + ' watchlist protocols, ranked by implied value, plus every other genuine pre-token launch below the floor. Implied value is a model of the snapshot figures, not a promise, and every row carries the steps to farm it.' })
+        el('h1', { text: 'Which pre-token protocol should you farm next?' }),
+        el('p', { text: DATA.watchlist_size + ' watchlist protocols, ranked by implied value, plus every other genuine pre-token launch below the floor. Implied value is a model built from the snapshot figures, not a promise, and every row carries the steps to farm it.' })
       ),
       el('div', { class: 'facts' },
-        el('div', { class: 'fact' }, el('span', { text: 'Watchlist covered' }), el('b', { text: DATA.watchlist_size + ' / ' + DATA.watchlist_size })),
-        el('div', { class: 'fact' }, el('span', { text: 'Pre-token rows scored' }), el('b', { text: String(DATA.board_size) })),
+        el('div', { class: 'fact' }, el('span', { text: 'Watchlist coverage' }), el('b', { text: DATA.watchlist_size + ' / ' + DATA.watchlist_size })),
+        el('div', { class: 'fact' }, el('span', { text: 'Pre-token rows ranked' }), el('b', { text: String(DATA.board_size) })),
         el('div', { class: 'fact' }, el('span', { text: 'Early rows below the floor' }), el('b', { text: String(DATA.early_size) })),
         el('div', { class: 'fact' }, el('span', { text: 'Not launchable, set aside' }), el('b', { text: String(DATA.excluded_size) })),
         el('div', { class: 'fact' }, el('span', { text: 'Live-token protocols set aside' }), el('b', { text: String(DATA.live_size) }))
@@ -289,8 +289,8 @@
     var list = earlyRows();
     if (!list.length) return null;
     return el('section', { class: 'panel early' },
-      el('h2', { text: 'Early radar: young, already growing' }),
-      el('p', { class: 'sub', text: 'Under a year old, at least $5M of TVL, and growing this week. These are the launches the board finds before the crowd does; the same model ranks them, so an early name still has to earn its place.' }),
+      el('h2', { text: 'Early radar: young and already growing' }),
+      el('p', { class: 'sub', text: 'Under a year old, at least $5M of TVL, and growing this week. These are the launches the board spots before the crowd does; the same model ranks them, so an early name still has to earn its place.' }),
       el('div', { class: 'early-grid' },
         list.map(function (r) {
           return el('button', { type: 'button', class: 'early-card', onclick: function () { openDetail(r.slug); } },
@@ -306,7 +306,7 @@
   function controls() {
     var categories = Array.from(new Set(DATA.rows.map(function (r) { return r.category || 'Other'; }))).sort();
     var chains = Array.from(new Set(DATA.rows.reduce(function (acc, r) { return acc.concat(r.chains || []); }, []))).sort();
-    var search = el('input', { type: 'search', id: 'q', placeholder: 'Search name, category or chain', value: state.q, 'aria-label': 'Search the board' });
+    var search = el('input', { type: 'search', id: 'q', placeholder: 'Search by name, category or chain', value: state.q, 'aria-label': 'Search the board' });
     search.addEventListener('input', function () { state.q = search.value; writeHash(); render(); });
     var select = el('select', { id: 'category', 'aria-label': 'Filter by category' },
       el('option', { value: 'all', text: 'All categories' }),
@@ -326,7 +326,7 @@
       el('div', { class: 'field' }, el('label', { for: 'q', text: 'Search' }), search),
       el('div', { class: 'field' }, el('label', { for: 'category', text: 'Category' }), select),
       el('div', { class: 'field' }, el('label', { for: 'chain', text: 'Chain' }), chainSelect),
-      el('div', { class: 'field check' }, watchBox, el('label', { for: 'watchlist-only', text: 'Watchlist only' })),
+      el('div', { class: 'field check' }, watchBox, el('label', { for: 'watchlist-only', text: 'Watchlist protocols only' })),
       el('div', { class: 'field' }, el('span', { class: 'sub', text: 'Token status' }), el('div', { class: 'tabs' }, pre, live)),
       el('span', { class: 'count', text: state.tab === 'pre-token' ? rows().length + ' rows shown' : DATA.live.length + ' live-token protocols' })
     );
@@ -345,8 +345,8 @@
     var list = sortedRows(rows());
     if (list.length === 0) {
       return el('div', { class: 'panel' }, el('div', { class: 'empty' },
-        el('h2', { text: 'No protocol matches that filter' }),
-        el('p', { text: 'Clear the search or pick another category to see the board again.' }),
+        el('h2', { text: 'No protocol matches those filters' }),
+        el('p', { text: 'Clear the search or pick another category to bring the board back.' }),
         el('button', { class: 'button primary', type: 'button', text: 'Clear filters', onclick: function () { state.q = ''; state.category = 'all'; state.chain = 'all'; state.watchlistOnly = false; writeHash(); render(); } })
       ));
     }
@@ -381,7 +381,7 @@
     return el('div', { class: 'panel' },
       el('div', { class: 'table-wrap' },
         el('table', null,
-          el('caption', { class: 'sub', text: 'Pre-token protocols, strongest implied value first. Select a row for its model and farm plan.' }),
+          el('caption', { class: 'sub', text: 'Pre-token protocols, strongest implied value first. Open a row for its model and farm plan.' }),
           el('thead', null, el('tr', null,
             sortHeader('implied', 'Rank'),
             sortHeader('name', 'Protocol'),
@@ -413,7 +413,7 @@
     return el('div', { class: 'panel' },
       el('div', { class: 'table-wrap' },
         el('table', null,
-          el('caption', { class: 'sub', text: 'Token live: these protocols already trade, so their market cap is a fact, not a model. They are set aside from the pre-token ranking.' }),
+          el('caption', { class: 'sub', text: 'Token live: these protocols already trade, so their market cap is a fact, not a model. They stay out of the pre-token ranking.' }),
           el('thead', null, el('tr', null, el('th', { scope: 'col', text: 'Status' }), el('th', { scope: 'col', text: 'Protocol' }), el('th', { scope: 'col', text: 'TVL' }), el('th', { scope: 'col', text: '7d' }), el('th', { scope: 'col', text: 'Market cap' }), el('th', { scope: 'col', text: 'Token' }))),
           tbody
         )
@@ -424,13 +424,13 @@
   function modelPanel() {
     var m = DATA.model;
     return el('section', { class: 'panel model' },
-      el('h2', { text: 'How implied value is computed' }),
-      el('p', { class: 'sub', text: 'Every row is scored by one function of the snapshot figures. No protocol name is special-cased, and no row is hand-picked.' }),
+      el('h2', { text: 'How the implied value is computed' }),
+      el('p', { class: 'sub', text: 'One function of the snapshot figures scores every row. No protocol name is special-cased, and no row is hand-picked.' }),
       el('div', { class: 'formula' },
         'implied = round( tvl_usd x ' + m.base_multiple + ' x (1 + clamp(change_7d, ' + m.growth_floor + ', ' + m.growth_cap + ') / 100 x ' + m.growth_weight + ') x (' + m.maturity_floor + ' + min(age_days, ' + m.maturity_days + ') / ' + m.maturity_days + ' x ' + m.maturity_range + ') x (1 + 0.03 x min(chains - 1, 5)) )'
       ),
-      el('p', { class: 'sub', text: 'TVL and seven-day growth come from the snapshot. Age is the time since the protocol was first listed, the best record of how long it has run with no token; an unlisted age uses ' + m.unknown_age_days + ' days. Chain breadth counts the chains the protocol runs on: one chain scores 1.00, six or more score 1.15. The early radar is every rankable protocol below the watchlist floor, by the same rule.' }),
-      el('p', { class: 'sub', text: 'Set aside from the ranking: exchanges, bridges, liquid-staking and restaking products, versioned pools, and wrapped or staked products of a token that already trades. Each is a product of a token that exists, not a launch still to come; the live-token protocols are set aside with their market caps shown instead.' })
+      el('p', { class: 'sub', text: 'TVL and seven-day growth come from the snapshot. Age is the time since the protocol was first listed, the best record of how long it has run with no token; an unlisted age uses ' + m.unknown_age_days + ' days. Chain breadth counts the chains the protocol runs on: one chain scores 1.00, six or more score 1.15. The early radar holds every rankable protocol below the watchlist floor, by the same rule.' }),
+      el('p', { class: 'sub', text: 'Left out of the ranking: exchanges, bridges, liquid-staking and restaking products, versioned pools, and wrapped or staked products of a token that already trades. Each is a product of a token that exists, not a launch still ahead; the live-token protocols are set aside with their market caps shown instead.' })
     );
   }
 
@@ -471,7 +471,7 @@
     // A reader who never reads the formula still learns which factor puts the row here, and what
     // a flat week would do to it. The sentences are generated, never typed in about a name.
     dialog.appendChild(el('section', { class: 'detail-section why' },
-      el('h3', { text: 'Why this rank' }),
+      el('h3', { text: 'Why it ranks here' }),
       el('div', { class: 'why-body' }, rankStory(row).map(function (s) { return el('p', { text: s }); }))
     ));
     dialog.appendChild(el('section', { class: 'detail-section' },
@@ -492,7 +492,7 @@
 
   function footer() {
     return el('footer', { class: 'foot' },
-      el('p', { class: 'sub', text: 'Source: DefiLlama protocol index, snapshot ' + DATA.as_of + '. Floor $' + Math.round(DATA.floor_usd / 1e6) + 'M of TVL. This page makes no network call: every figure on it is in the data written beside the page. Implied values are the radar-2 model\u2019s claim, never a price, and a protocol that records no token may still have one its record does not carry.' })
+      el('p', { class: 'sub', text: 'Source: DefiLlama protocol index, snapshot ' + DATA.as_of + '. Floor $' + Math.round(DATA.floor_usd / 1e6) + 'M of TVL. This page makes no network call: every figure on it lives in the data written beside the page. Implied values are the radar-2 model\u2019s claim, never a price, and a protocol that records no token may still have one its record does not carry.' })
     );
   }
 

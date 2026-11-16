@@ -6,7 +6,7 @@
 
 The best token launch radar: a program plus the dashboard it writes. It reads the
 sealed DefiLlama snapshot, ranks every genuine pre-token launch by an implied value
-derived from the snapshot's own figures, and hands a reader a farm plan for each one.
+derived from the snapshot's own figures, and hands each reader a farm plan for it.
 
 ## The model (radar-2)
 
@@ -14,7 +14,7 @@ A protocol is rankable only when it records no token **and** is not a product of
 token that already trades: not an exchange, not a bridge, not a liquid-staking or
 restaking product, not a versioned pool, and its name carries no wrapped / staked /
 staking word and does not begin with an exchange's name. That is the watchlist's own
-rule, applied to the whole board. Of the snapshot's 342 pre-token protocols, 144 are
+rule, stretched across the whole board. Of the snapshot's 342 pre-token protocols, 144 are
 set aside by it; 198 are ranked, including all 40 watchlist protocols and every
 rankable protocol below the $50M floor.
 
@@ -27,18 +27,18 @@ implied = round( tvl_usd x 0.25
   x (1 + 0.03 x min(chains - 1, 5)) )
 ```
 
-TVL is the size of the economy a token would price; seven-day growth is the direction
-it moves; age with no token is how long it has run and grown without one; chain breadth
-is how widely it is already distributed. No protocol name is special-cased.
+TVL measures the size of the economy a token would price; seven-day growth shows the
+direction it is heading; age with no token is how long the protocol has run and grown
+without one; chain breadth is how widely it is already distributed. No protocol name is special-cased.
 
 ## The dashboard
 
 - A board of all 198 ranked protocols, sortable by implied value, TVL, growth, age
   and name, with search, category and chain filters, and a watchlist-only toggle.
 - A top-5 spotlight and an **early radar**: young protocols (under a year old) whose
-  TVL is already growing — the launches found before the crowd.
+  TVL is already growing — the launches spotted before the crowd.
 - A detail view for each protocol: the model's four multipliers recomputed in the
-  page, and a seven-step farm plan with what each step costs and how long it takes.
+  page, a plain-words story of why it ranks here, and a seven-step farm plan with costs and times.
 - A live-token view, set aside: protocols whose token already trades, shown at
   market cap, never mixed into the ranking.
 - No network: every figure on the page is in `data.js`, written beside the page by
@@ -57,8 +57,8 @@ writes `dossier.json` with the vendored `buildDossier`. Two runs write the same 
 
 ## Screenshots
 
-The three screenshots in `screenshots/` are renders of this dashboard in a headless
-browser: the board, a protocol's detail view, and a filtered view.
+The four screenshots in `screenshots/` are renders of this dashboard in a headless
+browser: the board, a protocol's detail view, a filtered view, and the live-token view.
 
 ## License
 

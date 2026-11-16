@@ -8,7 +8,7 @@
 // rankable one below the floor), sets aside the 144 pre-token products of tokens that already
 // trade, and gives every ranked row a seven-step farm plan. The dashboard also tells, for each
 // row, why it ranks where it does: lib/model.ts rankStory derives that story from the row's own
-// figures, and dashboard/app.js mirrors it, so the story is the model's arithmetic in words.
+// figures, and dashboard/app.js mirrors it, so the story is the model's arithmetic put into words.
 //
 // The dashboard is a static page, no framework and no network: dashboard/index.html, dashboard/app.css
 // and dashboard/app.js read /output/data.js, which this program writes from the same board.
@@ -24,7 +24,7 @@ import { buildDossier } from './vendor/makefun-board.ts';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 
-/** The scorer's own caps (reference/gate.json): the text cap shapes the bytes, the rest refuse. */
+/** The scorer's own caps (reference/gate.json): the text cap shapes the bytes, the rest refuse an entry. */
 const TEXT_MAX_BYTES = 65_536;
 const SCREENSHOT_CAPS = { max: 4, max_bytes: 524_288 };
 const IMAGE_NAME = /^[A-Za-z0-9_][A-Za-z0-9._-]{0,127}$/;
@@ -57,7 +57,7 @@ mkdirSync(out, { recursive: true });
 writeFileSync(join(out, 'board.json'), `${JSON.stringify({ rows: board })}\n`);
 writeFileSync(join(out, 'data.js'), dataScript(radar));
 
-/** Copy one directory's regular files into `to`, skipping names that start with a dot. */
+/** Copy one directory's regular files into `to`, leaving out names that start with a dot. */
 function copyFiles(from: string, to: string): string[] {
   if (!existsSync(from)) return [];
   mkdirSync(to, { recursive: true });
