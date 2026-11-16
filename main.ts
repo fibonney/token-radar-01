@@ -6,7 +6,9 @@
 // Last, it writes /output/dossier.json, the summary the judge reads, with the vendored make.fun
 // library. The model ranks all 198 rankable protocols (the 40 watchlist protocols and every
 // rankable one below the floor), sets aside the 144 pre-token products of tokens that already
-// trade, and gives every ranked row a seven-step farm plan.
+// trade, and gives every ranked row a seven-step farm plan. The dashboard also tells, for each
+// row, why it ranks where it does: lib/model.ts rankStory derives that story from the row's own
+// figures, and dashboard/app.js mirrors it, so the story is the model's arithmetic in words.
 //
 // The dashboard is a static page, no framework and no network: dashboard/index.html, dashboard/app.css
 // and dashboard/app.js read /output/data.js, which this program writes from the same board.
@@ -73,7 +75,7 @@ function copyFiles(from: string, to: string): string[] {
 copyFiles(join(here, 'dashboard'), join(out, 'dashboard'));
 const shots = copyFiles(join(here, 'screenshots'), join(out, 'screenshots'));
 if (shots.length < 3) {
-  process.stderr.write(`token radar: screenshots/ holds ${shots.length} image${shots.length === 1 ? '' : 's'}: hand in 3, the board, a detail view and a filtered view\n`);
+  process.stderr.write(`token radar: screenshots/ holds ${shots.length} image${shots.length === 1 ? '' : 's'}: hand in 3 or 4, the board, a detail view, a filtered view and the live-token view\n`);
   process.exit(1);
 }
 for (const name of shots) {

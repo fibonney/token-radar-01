@@ -160,6 +160,10 @@ tbody tr[data-selected="true"] { background: var(--accent-soft); }
 .detail .sub { margin-top: var(--step-1); }
 .detail-section { margin-top: var(--step-5); padding-top: var(--step-4); border-top: 1px solid var(--border); }
 .detail-section h3 { margin-bottom: var(--step-2); }
+/* Why this rank: the model's story, in plain sentences, one paragraph each. */
+.why-body { display: grid; gap: var(--step-2); }
+.why-body p { font-size: 14px; line-height: 1.55; }
+.why-body p:first-child { font-weight: 600; }
 .equation { display: grid; gap: var(--step-2); font-family: var(--font-num); font-size: 13px; }
 .equation div { display: flex; justify-content: space-between; gap: var(--step-3); }
 .equation span { color: var(--muted); }

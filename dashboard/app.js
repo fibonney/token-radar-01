@@ -1,9 +1,11 @@
 // Token Radar, radar-2 dashboard. It reads window.RADAR (written beside dashboard/ by main.ts)
 // and renders the ranked board, a top-5 spotlight, an early radar of young fast growers, a
-// filterable table, and a per-protocol detail dialog with the model's own inputs and the
-// protocol's farm plan. No network: every byte it shows is in data.js. The page recomputes each
-// row's implied value from the snapshot figures, so the page's code and the board's data are
-// visibly the same arithmetic; the farm plan is the same derivation main.ts writes to board.json.
+// filterable table, and a per-protocol detail dialog with the model's own inputs, a plain-words
+// story of why the row ranks where it does, and the protocol's farm plan. No network: every byte
+// it shows is in data.js. The page recomputes each row's implied value from the snapshot figures,
+// so the page's code and the board's data are visibly the same arithmetic; the farm plan is the
+// same derivation main.ts writes to board.json, and the rank story is the same derivation the
+// model states in lib/model.ts rankStory, mirrored here from the same row fields.
 (function () {
   'use strict';
 
@@ -37,6 +39,47 @@
     var maturity = model.maturity_floor + (Math.min(Math.max(age, 0), model.maturity_days) / model.maturity_days) * model.maturity_range;
     var breadth = 1 + Math.min(Math.max((row.chains || []).length - 1, 0), model.breadth_max_extra_chains) * model.breadth_step;
     return Math.max(1, Math.round(row.tvl_usd * model.base_multiple * growthMult * maturity * breadth));
+  }
+
+  // Why one row ranks where it does, in plain sentences recomputed from the row's own figures.
+  // This mirrors lib/model.ts rankStory, which states the same derivation in TypeScript: position
+  // against the top of the board, the multiplier furthest from 1.00 as the driver, and the value
+  // a flat week would leave. Nothing here is typed in by hand about a name: the same function
+  // tells the story of rank 1 and of rank 198, and the numbers it quotes are the row's.
+  function rankStory(row) {
+    var top = DATA.rows.length ? DATA.rows[0].implied_value_usd : 0;
+    var sharePct = top > 0 ? Math.round((row.implied_value_usd / top) * 100) : 0;
+    var place = row.rank <= 10 ? 'in the top 10' : row.rank * 4 <= DATA.board_size ? 'in the top quarter' : row.rank * 2 <= DATA.board_size ? 'in the top half' : 'in the lower half';
+    var first = 'Rank ' + row.rank + ' of ' + DATA.board_size + ', ' + place + ': its implied value of ' + fmtUsd(row.implied_value_usd) + ' is ' + sharePct + '% of the top row\u2019s ' + fmtUsd(top) + '.';
+    // Each multiplier's lift, each against its own neutral point: growth and breadth against
+    // 1.00 (they can lift the value above its TVL base), maturity against its 0.60 floor (it
+    // never reaches 1.00, so what age adds is measured against a brand-new protocol).
+    var lifts = [
+      { name: 'growth', lift: row.growth_multiplier - 1 },
+      { name: 'maturity', lift: row.maturity_multiplier - 0.6 },
+      { name: 'breadth', lift: row.breadth_multiplier - 1 }
+    ];
+    var driver = lifts[0];
+    lifts.forEach(function (l) { if (Math.abs(l.lift) > Math.abs(driver.lift)) driver = l; });
+    var liftPct = Math.round(Math.abs(driver.lift) * 100);
+    var second;
+    if (liftPct === 0) {
+      second = 'No single factor lifts it: its value is its TVL base of ' + fmtUsd(row.tvl_usd * DATA.model.base_multiple) + ', with growth, age and breadth all near neutral.';
+    } else if (driver.name === 'growth') {
+      var growthPct = Math.min(DATA.model.growth_cap, Math.max(DATA.model.growth_floor, row.change_7d === null || row.change_7d === undefined ? 0 : row.change_7d));
+      var direction = row.growth_multiplier >= 1 ? 'lifts' : 'cuts';
+      second = 'Seven-day growth is the main driver: ' + Math.round(growthPct * 100) / 100 + '% this week ' + direction + ' its value by ' + liftPct + '% over its TVL base.';
+    } else if (driver.name === 'maturity') {
+      var ageText = row.age_days === null || row.age_days === undefined ? 'an unlisted age' : row.age_days + ' days with no token';
+      second = 'Age is the main driver: ' + ageText + ' scores a ' + row.maturity_multiplier.toFixed(2) + ' maturity multiplier, against 0.60 for a brand-new protocol.';
+    } else {
+      second = 'Chain breadth is the main driver: ' + (row.chains || []).length + ' chains lift its value by ' + liftPct + '% over its TVL base.';
+    }
+    var flat = Math.max(1, Math.round(row.implied_value_usd / row.growth_multiplier));
+    var third = row.growth_multiplier === 1
+      ? 'A flat week would change nothing: its growth multiplier is already 1.00.'
+      : 'A flat week (0% growth) would put it at ' + fmtUsd(flat) + ' instead of ' + fmtUsd(row.implied_value_usd) + '.';
+    return [first, second, third];
   }
 
   function el(tag, attrs) {
@@ -423,6 +466,13 @@
         el('div', null, el('span', { text: 'Implied value' }), el('b', { class: 'num', text: fmtUsd(row.implied_value_usd) }))
       ),
       el('p', { class: 'sub', text: 'Model ' + DATA.model_version + ': the same function scores every protocol. The page recomputes this row as ' + fmtUsd(impliedOf(row, DATA.model)) + (impliedOf(row, DATA.model) === row.implied_value_usd ? ', the same number board.json carries.' : ', which differs from the board: the data would be stale.') + ' This is an estimate, not a price. The record says no token, never that it has none.' })
+    ));
+    // Why this row ranks where it does: the model's own story, recomputed from the row's figures.
+    // A reader who never reads the formula still learns which factor puts the row here, and what
+    // a flat week would do to it. The sentences are generated, never typed in about a name.
+    dialog.appendChild(el('section', { class: 'detail-section why' },
+      el('h3', { text: 'Why this rank' }),
+      el('div', { class: 'why-body' }, rankStory(row).map(function (s) { return el('p', { text: s }); }))
     ));
     dialog.appendChild(el('section', { class: 'detail-section' },
       el('h3', { text: 'Farm plan' }),

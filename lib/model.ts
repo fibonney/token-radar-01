@@ -24,6 +24,12 @@
 // the longer, the more pent-up the launch. Chain breadth is how widely it is already distributed:
 // a protocol live on six chains reaches more farmers than one live on one. No protocol name is
 // ever special-cased: the same function scores every row, and the dashboard shows every factor.
+//
+// The model also explains each rank. rankStory turns one board row into plain sentences: where
+// the row sits against the top of the board, which of the three multipliers moves it most, and
+// what a flat week would do to its value. The dashboard mirrors that derivation in its own code
+// (dashboard/app.js), from the same row figures, so the story the reader sees is the model's own
+// arithmetic in words, never a hand-written note about a name.
 
 /** The snapshot's protocol entry: exactly the ten fields the sealed input carries. */
 export interface SnapshotProtocol {
@@ -202,6 +208,71 @@ export function impliedValue(protocol: SnapshotProtocol, asOf: string, model: Mo
   return { implied, growthPct, growthMult, maturityMult, breadthMult, age };
 }
 
+/** A dollar amount in the short form the board and the story use: $625.2M, $727K, $42. */
+export function usdShort(n: number): string {
+  if (!Number.isFinite(n)) return 'n/a';
+  if (Math.abs(n) >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (Math.abs(n) >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  if (Math.abs(n) >= 1e3) return `$${Math.round(n / 1e3)}K`;
+  return `$${Math.round(n)}`;
+}
+
+/**
+ * Why one board row ranks where it does, in plain sentences derived from the row's own figures.
+ * The story has three parts, and every number in it is recomputed here from the row, never typed
+ * in by hand:
+ *
+ * 1. Position: the rank against the board's size, and the row's implied value as a share of the
+ *    top row's. A reader who only reads this line knows whether the row leads the board or trails it.
+ * 2. Driver: of the three multipliers, the one furthest from its own neutral point is the
+ *    reason the row sits where it does: growth and breadth against 1.00, maturity against its
+ *    0.60 floor. The sentence states the direction the factor actually runs, so a maturity
+ *    below 1.00 is never called a lift.
+ * 3. Counterfactual: the value the same row would carry after a flat week, with growth set to 0,
+ *    which is the implied value divided by the growth multiplier. When growth already is flat the
+ *    sentence says so instead of inventing a change.
+ *
+ * The dashboard mirrors this function in plain JavaScript (dashboard/app.js rankStory), from the
+ * same row fields, so the story a reader sees in the detail dialog is this derivation, not a copy.
+ */
+export function rankStory(row: BoardRow, topImplied: number, boardSize: number): string[] {
+  const m = row.model;
+  const share = topImplied > 0 ? row.implied_value_usd / topImplied : 0;
+  const sharePct = Math.round(share * 100);
+  const place = row.rank <= 10 ? 'in the top 10' : row.rank * 4 <= boardSize ? 'in the top quarter' : row.rank * 2 <= boardSize ? 'in the top half' : 'in the lower half';
+  const first = `Rank ${row.rank} of ${boardSize}, ${place}: its implied value of ${usdShort(row.implied_value_usd)} is ${sharePct}% of the top row's ${usdShort(topImplied)}.`;
+  // Each multiplier's lift, each against its own neutral point: growth and breadth against 1.00
+  // (they can lift the value above its TVL base), maturity against its 0.60 floor (it never
+  // reaches 1.00, so what age adds is measured against a brand-new protocol, not against 1.00).
+  // The largest lift is the driver; the sentence then states it in the direction it actually runs.
+  const lifts = [
+    { name: 'growth', lift: m.growth_multiplier - 1 },
+    { name: 'maturity', lift: m.maturity_multiplier - 0.6 },
+    { name: 'breadth', lift: m.breadth_multiplier - 1 },
+  ];
+  let driver = lifts[0]!;
+  for (const l of lifts) if (Math.abs(l.lift) > Math.abs(driver.lift)) driver = l;
+  const liftPct = Math.round(Math.abs(driver.lift) * 100);
+  let second: string;
+  if (liftPct === 0) {
+    second = `No single factor lifts it: its value is its TVL base of ${usdShort(row.tvl_usd * m.base_multiple)}, with growth, age and breadth all near neutral.`;
+  } else if (driver.name === 'growth') {
+    const direction = m.growth_multiplier >= 1 ? 'lifts' : 'cuts';
+    second = `Seven-day growth is the main driver: ${Number(m.growth_pct.toFixed(2))}% this week ${direction} its value by ${liftPct}% over its TVL base.`;
+  } else if (driver.name === 'maturity') {
+    const ageText = m.age_days === null ? 'an unlisted age' : `${m.age_days} days with no token`;
+    second = `Age is the main driver: ${ageText} scores a ${m.maturity_multiplier.toFixed(2)} maturity multiplier, against 0.60 for a brand-new protocol.`;
+  } else {
+    second = `Chain breadth is the main driver: ${row.chains.length} chains lift its value by ${liftPct}% over its TVL base.`;
+  }
+  const flat = Math.max(1, Math.round(row.implied_value_usd / m.growth_multiplier));
+  const third =
+    m.growth_multiplier === 1
+      ? `A flat week would change nothing: its growth multiplier is already 1.00.`
+      : `A flat week (0% growth) would put it at ${usdShort(flat)} instead of ${usdShort(row.implied_value_usd)}.`;
+  return [first, second, third];
+}
+
 /** DefiLlama's version-marker rule: a name ending in a release is a pool of another protocol. */
 const VERSIONED = /\s(V\d+(\.\d+)?|v\d+(\.\d+)?|\d+\.\d+)$/;
 
@@ -253,7 +324,9 @@ export function buildBoard(snapshot: Snapshot, model: ModelConstants = MODEL): B
   const index = bySlug(snapshot.protocols);
   const chosen = new Map<string, SnapshotProtocol>();
   // The watchlist is the floor: every slug, even one the snapshot no longer carries (it cannot, but
-  // the board's coverage is the gate's row and is never gambled on a missing record).
+  // the board's coverage is the gate's row and is never gambled on a missing record). A watchlist
+  // slug is ranked whatever the rule says about it, because the gate's coverage row names the
+  // watchlist and the board must never miss one of its slugs.
   for (const slug of snapshot.watchlist) {
     const p = index.get(slug);
     if (p !== undefined) chosen.set(slug, p);
